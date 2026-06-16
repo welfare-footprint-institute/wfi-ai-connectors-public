@@ -1,0 +1,253 @@
+openapi: 3.1.0
+info:
+  title: WFI Scientific Canon Reader
+  version: "0.1.0"
+  description: >
+    Read selected live files from the public WFI Scientific Canon repository.
+    This action is read-only and retrieves WFF methodology, terminology,
+    module guidance, resolved methodological decisions, deprecated terms,
+    and AI-use rules from GitHub.
+
+servers:
+  - url: https://raw.githubusercontent.com
+
+paths:
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/README.md:
+    get:
+      operationId: getRepositoryReadme
+      summary: Get the repository README
+      responses:
+        "200":
+          description: Repository README Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/AI_USE.md:
+    get:
+      operationId: getAiUseRules
+      summary: Get responsible AI-use rules for the canon
+      responses:
+        "200":
+          description: AI-use rules Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/CANON_MAP.md:
+    get:
+      operationId: getCanonMap
+      summary: Get the canon reading map
+      responses:
+        "200":
+          description: Canon map Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/README_FOR_AGENTS.md:
+    get:
+      operationId: getAgentReadme
+      summary: Get agent-facing repository instructions
+      responses:
+        "200":
+          description: Agent README Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/manifest.yaml:
+    get:
+      operationId: getManifest
+      summary: Get the machine-readable repository manifest
+      responses:
+        "200":
+          description: Manifest YAML
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/canon/principles.md:
+    get:
+      operationId: getPrinciples
+      summary: Get core WFF principles
+      responses:
+        "200":
+          description: Principles canon Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/canon/terminology.md:
+    get:
+      operationId: getTerminology
+      summary: Get core WFF terminology
+      responses:
+        "200":
+          description: Terminology canon Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/canon/intensity_categories_pain.md:
+    get:
+      operationId: getPainIntensityCategories
+      summary: Get pain intensity categories
+      responses:
+        "200":
+          description: Pain intensity categories Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/canon/intensity_categories_pleasure.md:
+    get:
+      operationId: getPleasureIntensityCategories
+      summary: Get pleasure intensity categories
+      responses:
+        "200":
+          description: Pleasure intensity categories Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/canon/visualization_conventions.md:
+    get:
+      operationId: getVisualizationConventions
+      summary: Get canon visualization conventions
+      responses:
+        "200":
+          description: Visualization conventions Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/glossary/wff_terms.yaml:
+    get:
+      operationId: getWffTerms
+      summary: Get machine-readable WFF terms
+      responses:
+        "200":
+          description: WFF terms YAML
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/glossary/deprecated_terms.yaml:
+    get:
+      operationId: getDeprecatedTerms
+      summary: Get deprecated WFF terms and replacements
+      responses:
+        "200":
+          description: Deprecated terms YAML
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/modules/i_zootechnical_description.md:
+    get:
+      operationId: getModuleI
+      summary: Get Module I specification
+      responses:
+        "200":
+          description: Module I Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/modules/ii_veterinary_inventory.md:
+    get:
+      operationId: getModuleII
+      summary: Get Module II specification
+      responses:
+        "200":
+          description: Module II Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/modules/iii_affective_quantification.md:
+    get:
+      operationId: getModuleIII
+      summary: Get Module III specification
+      responses:
+        "200":
+          description: Module III Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/modules/iv_epidemiological_review.md:
+    get:
+      operationId: getModuleIV
+      summary: Get Module IV specification
+      responses:
+        "200":
+          description: Module IV Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/modules/v_econometric_calculation.md:
+    get:
+      operationId: getModuleV
+      summary: Get Module V specification
+      responses:
+        "200":
+          description: Module V Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/modules/vi_expression_notation.md:
+    get:
+      operationId: getModuleVI
+      summary: Get Module VI specification
+      responses:
+        "200":
+          description: Module VI Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/modules/psi_interspecific_scaling.md:
+    get:
+      operationId: getModulePsi
+      summary: Get Module Psi specification
+      responses:
+        "200":
+          description: Module Psi Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /welfare-footprint-institute/wfi-scientific-canon-public/main/review/resolved_methodological_decisions.md:
+    get:
+      operationId: getResolvedMethodologicalDecisions
+      summary: Get resolved methodological decisions
+      responses:
+        "200":
+          description: Resolved methodological decisions Markdown
+          content:
+            text/plain:
+              schema:
+                type: string
