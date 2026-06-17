@@ -1,0 +1,14 @@
+{
+  "_comment": "Example Claude Code MCP server configuration for the WFI Canon MCP server. Replace ABSOLUTE_PATH_TO with the location of your local clone of wfi-ai-connectors-public. Run 'npm install' and 'npm run build' first. Remove the _comment and _comment_* keys before use.",
+  "mcpServers": {
+    "wfi-canon": {
+      "command": "node",
+      "args": [
+        "ABSOLUTE_PATH_TO/wfi-ai-connectors-public/dist/index.js"
+      ],
+      "env": {}
+    }
+  },
+  "_comment_env_override": "To test an unmerged canon index branch, add to env: \"WFI_CANON_INDEX_URL\": \"https://raw.githubusercontent.com/welfare-footprint-institute/wfi-scientific-canon-public/docs/add-canon-index/canon_index.yaml\"",
+  "_comment_dev_alternative": "To run from TypeScript without building, set command to 'npx' and args to [\"tsx\", \"ABSOLUTE_PATH_TO/wfi-ai-connectors-public/src/index.ts\"]."
+}
