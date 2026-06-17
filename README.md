@@ -8,7 +8,9 @@ The canonical scientific content is not stored here. It lives in:
 
 This repository only provides connector files, such as OpenAPI schemas for Custom GPT Actions.
 
-## Current connector
+## Current connectors
+
+### ChatGPT Action (existing)
 
 - `chatgpt-actions/wfi-canon-reader.openapi.yaml`
 
@@ -17,6 +19,26 @@ This OpenAPI schema allows a Custom GPT to retrieve selected live files from the
 The schema can be imported from:
 
 `https://raw.githubusercontent.com/welfare-footprint-institute/wfi-ai-connectors-public/main/chatgpt-actions/wfi-canon-reader.openapi.yaml`
+
+### MCP server (local stdio)
+
+- `mcp/` (documentation) and `src/` (implementation)
+
+A local stdio MCP server that makes the public WFI Scientific Canon available to
+MCP-compatible clients such as Claude Code and similar tools.
+
+Key properties:
+
+- It reads the **live public canon index** (`canon_index.yaml`) from the canon
+  repository and exposes only entries that index declares as AI-accessible.
+- It is **read-only and index-driven**. It performs no GitHub writes, opens no
+  issues or PRs, and accesses no private repositories.
+- It **does not duplicate canon content**. It retrieves and returns source
+  material; it does not summarize or invent scientific content.
+- The canon structure is **not hard-coded** in the server. The only hard-coded
+  default is the canon index URL, which is overridable via `WFI_CANON_INDEX_URL`.
+
+See `mcp/README.md` for setup and `mcp/security.md` for the security model.
 
 ## Scope
 
