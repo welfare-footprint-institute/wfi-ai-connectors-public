@@ -32,8 +32,9 @@ invent canon content.
 **Resources**
 
 - One resource per indexed entry, with URIs like
-  `wfi-canon://entry/terminology`. The resource list is derived from the live
-  index.
+  `wfi-canon://entry/terminology`. The registered MCP resource list is derived
+  from the canon index at server startup. If `canon_index.yaml` changes, restart
+  the local MCP server to refresh the registered MCP resource list.
 
 **Prompts**
 

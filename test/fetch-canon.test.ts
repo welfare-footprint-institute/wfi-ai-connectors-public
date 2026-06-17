@@ -46,7 +46,13 @@ describe("createCachedFetcher", () => {
 describe("httpFetchText size and error handling", () => {
   it("rejects content larger than maxBytes via content-length", async () => {
     const big = "x".repeat(1000);
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(big)));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(big, { headers: { "content-length": String(big.length) } }),
+      ),
+    );
     await expect(
       httpFetchText("https://raw.githubusercontent.com/a", {
         timeoutMs: 1000,
