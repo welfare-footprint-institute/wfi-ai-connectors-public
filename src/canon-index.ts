@@ -98,6 +98,24 @@ export function parseIndex(text: string): CanonIndex {
   return validateIndex(raw);
 }
 
+/**
+ * Build the connector-visible view of a validated index.
+ * Entries marked ai_accessible: false are hidden from every tool and resource.
+ */
+export function filterAiAccessibleIndex(index: CanonIndex): CanonIndex {
+  const entries = index.entries.filter((entry) => entry.ai_accessible === true);
+  const accessibleIds = new Set(entries.map((entry) => entry.id));
+
+  const bundles = index.bundles
+    .map((bundle) => ({
+      ...bundle,
+      entry_ids: bundle.entry_ids.filter((id) => accessibleIds.has(id)),
+    }))
+    .filter((bundle) => bundle.entry_ids.length > 0);
+
+  return { ...index, entries, bundles };
+}
+
 export interface EntryFilter {
   role?: string;
   exposure_level?: string;
@@ -169,7 +187,7 @@ export class CanonClient {
       return this.indexCache.index;
     }
     const text = await this.opts.fetcher(this.opts.indexUrl);
-    const index = parseIndex(text);
+    const index = filterAiAccessibleIndex(parseIndex(text));
     this.indexCache = { index, expires: t + this.opts.cacheTtlMs };
     return index;
   }
