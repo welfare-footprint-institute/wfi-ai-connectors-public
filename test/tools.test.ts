@@ -74,6 +74,7 @@ describe("get_entry", () => {
     const result = await client.getEntry("terminology", false);
     expect(result.content).toBeUndefined();
     expect(result.source_url).toBe(`${RAW_BASE}/canon/terminology.md`);
+    // Only the index was fetched, never the entry content URL.
     expect(calls).toEqual([INDEX_URL]);
   });
 

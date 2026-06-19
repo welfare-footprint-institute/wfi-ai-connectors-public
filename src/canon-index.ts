@@ -1,3 +1,16 @@
+/**
+ * Canon index model and client for the WFI Canon MCP server.
+ *
+ * The canon repository is self-describing: it publishes a machine-readable
+ * `canon_index.yaml` that declares which entries are AI-accessible, their stable
+ * IDs, roles, statuses, exposure levels, paths, and recommended bundles.
+ *
+ * This module does NOT hard-code the canon structure. It parses and validates
+ * whatever index the configured URL serves, and exposes only what that index
+ * declares. The only allowed hard-coded default (the index URL) lives in
+ * index.ts, not here.
+ */
+
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import {
@@ -49,24 +62,30 @@ export const IndexSchema = z.object({
 });
 export type CanonIndex = z.infer<typeof IndexSchema>;
 
+/**
+ * Validate a parsed index object against the schema plus structural rules:
+ * unique entry IDs, safe relative paths, a trusted raw_base_url, and bundles
+ * referencing only known entry IDs.
+ */
 export function validateIndex(raw: unknown): CanonIndex {
   const index = IndexSchema.parse(raw);
-  const ids = new Set<string>();
 
-  for (const entry of index.entries) {
-    if (ids.has(entry.id)) {
-      throw new Error(`Duplicate entry id in canon index: ${entry.id}`);
+  const ids = new Set<string>();
+  for (const e of index.entries) {
+    if (ids.has(e.id)) {
+      throw new Error(`Duplicate entry id in canon index: ${e.id}`);
     }
-    ids.add(entry.id);
-    assertSafeRelativePath(entry.path);
+    ids.add(e.id);
+    // Reject unsafe paths up front so they can never be fetched.
+    assertSafeRelativePath(e.path);
   }
 
   assertTrustedRawBaseUrl(index.source_repository.raw_base_url);
 
-  for (const bundle of index.bundles) {
-    for (const refId of bundle.entry_ids) {
+  for (const b of index.bundles) {
+    for (const refId of b.entry_ids) {
       if (!ids.has(refId)) {
-        throw new Error(`Bundle "${bundle.id}" references unknown entry id: ${refId}`);
+        throw new Error(`Bundle "${b.id}" references unknown entry id: ${refId}`);
       }
     }
   }
@@ -75,7 +94,8 @@ export function validateIndex(raw: unknown): CanonIndex {
 }
 
 export function parseIndex(text: string): CanonIndex {
-  return validateIndex(parseYaml(text));
+  const raw = parseYaml(text);
+  return validateIndex(raw);
 }
 
 /**
@@ -85,6 +105,7 @@ export function parseIndex(text: string): CanonIndex {
 export function filterAiAccessibleIndex(index: CanonIndex): CanonIndex {
   const entries = index.entries.filter((entry) => entry.ai_accessible === true);
   const accessibleIds = new Set(entries.map((entry) => entry.id));
+
   const bundles = index.bundles
     .map((bundle) => ({
       ...bundle,
@@ -114,6 +135,7 @@ export function entryUri(id: string): string {
   return `${ENTRY_URI_PREFIX}${id}`;
 }
 
+/** Parse a resource URI back to an entry id, or null if it is not a valid one. */
 export function parseEntryUri(uri: string): string | null {
   if (!uri.startsWith(ENTRY_URI_PREFIX)) return null;
   const id = uri.slice(ENTRY_URI_PREFIX.length);
@@ -121,22 +143,28 @@ export function parseEntryUri(uri: string): string | null {
   return id;
 }
 
-function scoreEntry(entry: CanonEntry, query: string): number {
+function scoreEntry(e: CanonEntry, q: string): number {
   let score = 0;
-  const hit = (value: string, weight: number): void => {
-    if (value.toLowerCase().includes(query)) score += weight;
+  const hit = (hay: string, weight: number): void => {
+    if (hay.toLowerCase().includes(q)) score += weight;
   };
-
-  hit(entry.id, 5);
-  hit(entry.title, 4);
-  hit(entry.role, 3);
-  hit(entry.recommended_use, 2);
-  hit(entry.path, 2);
-  for (const tag of entry.tags) hit(tag, 3);
-  for (const module of entry.wff_modules) hit(module, 3);
+  hit(e.id, 5);
+  hit(e.title, 4);
+  hit(e.role, 3);
+  hit(e.recommended_use, 2);
+  hit(e.path, 2);
+  for (const t of e.tags) hit(t, 3);
+  for (const m of e.wff_modules) hit(m, 3);
   return score;
 }
 
+/**
+ * Read-only client over a validated canon index.
+ *
+ * The client never accepts a URL or raw path from a caller. Callers reference
+ * entries by stable index ID (or by bundle ID, or by resource URI which maps to
+ * an ID). All file URLs are constructed internally from the index base.
+ */
 export class CanonClient {
   private indexCache?: { index: CanonIndex; expires: number };
 
@@ -154,14 +182,13 @@ export class CanonClient {
   }
 
   async getIndex(force = false): Promise<CanonIndex> {
-    const now = this.now();
-    if (!force && this.indexCache && this.indexCache.expires > now) {
+    const t = this.now();
+    if (!force && this.indexCache && this.indexCache.expires > t) {
       return this.indexCache.index;
     }
-
     const text = await this.opts.fetcher(this.opts.indexUrl);
     const index = filterAiAccessibleIndex(parseIndex(text));
-    this.indexCache = { index, expires: now + this.opts.cacheTtlMs };
+    this.indexCache = { index, expires: t + this.opts.cacheTtlMs };
     return index;
   }
 
@@ -171,31 +198,35 @@ export class CanonClient {
 
   async listEntries(filter: EntryFilter = {}): Promise<CanonEntry[]> {
     const index = await this.getIndex();
-    return index.entries.filter((entry) => {
-      if (filter.role && entry.role !== filter.role) return false;
-      if (filter.exposure_level && entry.exposure_level !== filter.exposure_level) return false;
-      if (filter.tag && !entry.tags.includes(filter.tag)) return false;
-      if (filter.wff_module && !entry.wff_modules.includes(filter.wff_module)) return false;
+    return index.entries.filter((e) => {
+      if (filter.role && e.role !== filter.role) return false;
+      if (filter.exposure_level && e.exposure_level !== filter.exposure_level) return false;
+      if (filter.tag && !e.tags.includes(filter.tag)) return false;
+      if (filter.wff_module && !e.wff_modules.includes(filter.wff_module)) return false;
       return true;
     });
   }
 
   async getEntry(id: string, includeContent: boolean): Promise<EntryResult> {
     const index = await this.getIndex();
-    const entry = index.entries.find((candidate) => candidate.id === id);
-    if (!entry) throw new Error(`Unknown canon entry id: ${id}`);
-
+    const entry = index.entries.find((e) => e.id === id);
+    if (!entry) {
+      throw new Error(`Unknown canon entry id: ${id}`);
+    }
     const source_url = this.sourceUrlFor(index, entry);
-    if (!includeContent) return { entry, source_url };
-
+    if (!includeContent) {
+      return { entry, source_url };
+    }
     const content = await this.opts.fetcher(source_url);
     return { entry, source_url, content };
   }
 
   async getEntries(ids: string[], includeContent: boolean): Promise<EntryResult[]> {
-    const results: EntryResult[] = [];
-    for (const id of ids) results.push(await this.getEntry(id, includeContent));
-    return results;
+    const out: EntryResult[] = [];
+    for (const id of ids) {
+      out.push(await this.getEntry(id, includeContent));
+    }
+    return out;
   }
 
   async getBundle(
@@ -203,24 +234,24 @@ export class CanonClient {
     includeContent: boolean,
   ): Promise<{ bundle: CanonBundle; entries: EntryResult[] }> {
     const index = await this.getIndex();
-    const bundle = index.bundles.find((candidate) => candidate.id === bundleId);
-    if (!bundle) throw new Error(`Unknown canon bundle id: ${bundleId}`);
-
+    const bundle = index.bundles.find((b) => b.id === bundleId);
+    if (!bundle) {
+      throw new Error(`Unknown canon bundle id: ${bundleId}`);
+    }
     const entries = await this.getEntries(bundle.entry_ids, includeContent);
     return { bundle, entries };
   }
 
   async searchIndex(query: string, limit = 10): Promise<CanonEntry[]> {
     const index = await this.getIndex();
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return [];
-
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
     return index.entries
-      .map((entry) => ({ entry, score: scoreEntry(entry, normalized) }))
-      .filter((result) => result.score > 0)
+      .map((e) => ({ e, score: scoreEntry(e, q) }))
+      .filter((s) => s.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, Math.max(0, limit))
-      .map((result) => result.entry);
+      .map((s) => s.e);
   }
 
   async listResources(): Promise<
@@ -234,19 +265,21 @@ export class CanonClient {
     }>
   > {
     const index = await this.getIndex();
-    return index.entries.map((entry) => ({
-      uri: entryUri(entry.id),
-      name: entry.id,
-      title: entry.title,
-      description: entry.recommended_use || `${entry.role} — ${entry.status}`,
-      mimeType: entry.mime_type,
-      entry,
+    return index.entries.map((e) => ({
+      uri: entryUri(e.id),
+      name: e.id,
+      title: e.title,
+      description: e.recommended_use || `${e.role} — ${e.status}`,
+      mimeType: e.mime_type,
+      entry: e,
     }));
   }
 
   async readResource(uri: string): Promise<EntryResult> {
     const id = parseEntryUri(uri);
-    if (!id) throw new Error(`Unknown or invalid canon resource URI: ${uri}`);
+    if (!id) {
+      throw new Error(`Unknown or invalid canon resource URI: ${uri}`);
+    }
     return this.getEntry(id, true);
   }
 }
