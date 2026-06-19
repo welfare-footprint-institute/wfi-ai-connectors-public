@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { CanonClient } from "../src/canon-index.js";
-import { makeMockFetcher, INDEX_URL, RAW_BASE } from "./fixtures.js";
+import { makeMockFetcher, INDEX_URL, RAW_BASE, VALID_INDEX_YAML } from "./fixtures.js";
 
 function makeClient(indexYaml?: string) {
   const mock = makeMockFetcher(indexYaml);
@@ -13,6 +13,16 @@ function makeClient(indexYaml?: string) {
   });
   return { client, calls: mock.calls };
 }
+
+const INDEX_WITH_INACCESSIBLE_ENTRY = VALID_INDEX_YAML
+  .replace(
+    "bundles:\n",
+    `  - id: internal_notes\n    path: canon/internal_notes.md\n    title: Internal notes\n    role: internal\n    status: internal_only\n    exposure_level: internal\n    ai_accessible: false\n    mime_type: text/markdown\n    wff_modules: []\n    tags: [internal]\n    recommended_use: Must not be exposed to AI clients.\nbundles:\n`,
+  )
+  .replace(
+    "      - deprecated_terms\n",
+    "      - deprecated_terms\n      - internal_notes\n",
+  );
 
 describe("list_entries filtering", () => {
   it("filters by role", async () => {
@@ -34,13 +44,36 @@ describe("list_entries filtering", () => {
   });
 });
 
+describe("ai_accessible enforcement", () => {
+  it("hides inaccessible entries from the visible index, bundles, listing, search, and resources", async () => {
+    const { client } = makeClient(INDEX_WITH_INACCESSIBLE_ENTRY);
+
+    const index = await client.getIndex();
+    expect(index.entries.map((e) => e.id)).not.toContain("internal_notes");
+    expect(index.bundles[0].entry_ids).not.toContain("internal_notes");
+
+    expect((await client.listEntries()).map((e) => e.id)).not.toContain("internal_notes");
+    expect(await client.searchIndex("internal", 10)).toHaveLength(0);
+    expect((await client.listResources()).map((r) => r.name)).not.toContain("internal_notes");
+  });
+
+  it("rejects direct and resource retrieval without fetching inaccessible content", async () => {
+    const { client, calls } = makeClient(INDEX_WITH_INACCESSIBLE_ENTRY);
+
+    await expect(client.getEntry("internal_notes", true)).rejects.toThrow(/Unknown canon entry id/);
+    await expect(client.readResource("wfi-canon://entry/internal_notes")).rejects.toThrow(
+      /Unknown canon entry id/,
+    );
+    expect(calls).toEqual([INDEX_URL]);
+  });
+});
+
 describe("get_entry", () => {
   it("returns metadata only when include_content is false (no content fetch)", async () => {
     const { client, calls } = makeClient();
     const result = await client.getEntry("terminology", false);
     expect(result.content).toBeUndefined();
     expect(result.source_url).toBe(`${RAW_BASE}/canon/terminology.md`);
-    // Only the index was fetched, never the entry content URL.
     expect(calls).toEqual([INDEX_URL]);
   });
 
